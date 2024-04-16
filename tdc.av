@@ -1,0 +1,115 @@
+// VerilogA for TDC_behavioral, top_TDC, veriloga
+
+`include "constants.vams"
+`include "disciplines.vams"
+
+module therm2bin(
+	input electrical [35:0] in,
+	output electrical [5:0] out,
+	input electrical vdd,
+	input electrical vss
+	);
+
+
+
+real sum;
+real out_v[5:0];
+integer i;
+analog begin
+	generate i (0,35) begin 
+		sum = sum + (V(in[i]) > 0.5*V(vdd) ? 1:0);
+	end
+	for(i = 5; i >= 0; i--) begin 
+		if (sum >= pow(2,i)) begin
+			sum = sum - pow(2,i);
+			out_v[i] = 1;
+		end
+	end
+	generate i (5,0) begin 
+		V(out[i]) <+ transition(out_v[i], 0 , 1n) * V(vdd);
+	end
+		
+end 
+
+
+endmodule
+
+module inverter(
+	output electrical out,
+	input electrical  in,
+	input electrical  vdd, 
+	input electrical  vss);
+
+
+
+real d_out;
+
+analog begin
+	@(cross(V(in) - 0.5*V(vdd)));
+	if(V(in) > 0.5*V(vdd)) d_out = 0;
+	else d_out=1;
+	V(out) <+ transition(d_out,0,10n)*V(vdd);
+end
+
+endmodule
+
+module flipflop(
+	input electrical D,
+	input electrical clk,
+	output electrical Q,
+	input electrical vdd,
+	input electrical vss);
+
+parameter real v0 = 0;
+parameter real v1 = 1 from (v0:inf);
+parameter integer dir=1 from [-1:1] exclude 0;
+parameter real td=0 from [0:inf);
+parameter real tt = 0 from [0:inf);
+real thresh;
+real d_out;
+integer out;
+analog begin
+thresh = (v0 + v1)/2;
+d_out = 0;
+@(initial_step or cross(V(clk) - thresh, dir)) begin 
+	d_out = 1;
+end
+out = idt(0, V(D) > thresh, d_out);
+ 
+V(Q) <+ transition(out ? v1:v0, td, tt);
+
+end
+
+
+endmodule
+
+module top_TDC (
+	input electrical start,
+	input electrical stop,
+	input electrical vdd,
+	input electrical vss,
+	output electrical [5:0] Q
+);
+electrical [35:0] inv_out;
+electrical [35:0] reg_out;
+electrical [35:0] final_reg_out;
+genvar i;
+
+
+	inverter inv(.out(inv_out[0]), .in(start), .vdd(vdd), .vss(vss));
+	
+	for( i = 1; i < 36; i++) begin
+		inverter invx(inv_out[i], inv_out[i-1], vdd, vss);
+	end
+	for(i = 0; i < 36; i++) begin
+		flipflop ffx(inv_out[i], stop, reg_out[i], vdd, vss);
+	end
+	for(i = 0; i < 36; i++) begin
+		if(i%2==0) inverter invf(final_reg_out[i], reg_out[i], vdd, vss);
+		else begin analog V(final_reg_out[i]) <+ V(reg_out[i]); end
+	end
+
+	therm2bin therm_to_bin(final_reg_out, Q, vdd, vss);
+
+
+endmodule
