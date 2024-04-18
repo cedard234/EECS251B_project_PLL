@@ -1,3 +1,6 @@
 [submodule "EECS251B_project_DCO"]
 	path = EECS251B_project_DCO
 	url = git@github.com:cedard234/EECS251B_project_DCO.git
+[submodule "EECS251b-project-dlf-div"]
+	path = EECS251b-project-dlf-div
+	url = git@github.com:Marco-Xuanlin-Chen/EECS251b-project-dlf-div.git
