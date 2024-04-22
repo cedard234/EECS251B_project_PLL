@@ -4,3 +4,6 @@
 [submodule "EECS251b-project-dlf-div"]
 	path = EECS251b-project-dlf-div
 	url = git@github.com:Marco-Xuanlin-Chen/EECS251b-project-dlf-div.git
+[submodule "TDC"]
+	path = TDC
+	url = https://github.com/SudhanvaKulkarni123/TDC_repo.git
